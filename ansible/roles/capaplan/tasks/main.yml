@@ -1,0 +1,13 @@
+---
+
+- name: install nginx
+  apt: name=nginx state=present
+
+- name: remove default vhost
+  file: dest=/etc/nginx/sites-enabled/default state=absent
+
+- name: configure capaplan vhost
+  template: src=capaplan_nginx.j2 dest=/etc/nginx/sites-available/capaplan.conf mode=0644 owner=root group=root
+
+- name: enable capaplan vhost
+  file: src=/etc/nginx/sites-available/capaplan.conf dest=/etc/nginx/sites-enabled/010-capaplan.conf state=link

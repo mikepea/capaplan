@@ -9,7 +9,7 @@
     - python-software-properties
 
 - name: add gov.uk PPA repo (for nginx, collectd)
-  shell: creates=/etc/apt/sources.list.d/gds-govuk-precise.list 'add-apt-repository --yes ppa:gds/govuk'
+  shell: 'add-apt-repository --yes ppa:gds/govuk'
 
 - name: run apt-get update
   shell: 'apt-get update'
