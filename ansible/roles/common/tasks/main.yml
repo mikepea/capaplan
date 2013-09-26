@@ -1,0 +1,32 @@
+---
+# This role creates a base environment common to all our machines
+#
+
+- name: install base packages
+  apt: name={{ item }} state=present
+  with_items: 
+    - language-pack-en
+    - python-software-properties
+
+- name: add gov.uk PPA repo (for nginx, collectd)
+  shell: creates=/etc/apt/sources.list.d/gds-govuk-precise.list 'add-apt-repository --yes ppa:gds/govuk'
+
+- name: run apt-get update
+  shell: 'apt-get update'
+
+- name: add mike group
+  group: gid=5353 name=mike
+
+- name: add mike user
+  user: uid=5353 name=mike shell=/bin/bash comment='Mike Pountney' group=mike groups=root,sys,adm,sudo
+
+- name: mike ssh dir
+  file: dest=/home/mike/.ssh owner=mike group=mike mode=2750 state=directory
+
+- name: mike ssh authorized_keys
+  copy: src=~mike/.ssh/authorized_keys dest=/home/mike/.ssh/ owner=mike group=mike mode=0640
+
+- name: ensure sudo group can run sudo with NOPASSWD
+  lineinfile: "dest=/etc/sudoers state=present regexp='^%sudo' line='%sudo ALL=(ALL) NOPASSWD: ALL'"
+
+# vim: et ts=2 sw=2 ai
