@@ -7,7 +7,6 @@ require 'digest/sha1'
 require 'fileutils'
 require 'timeout'
 
-require 'puma'
 require 'sinatra'
 
 TMP_DIR = '/tmp/capaplan'
@@ -32,6 +31,12 @@ unless File.exists?("#{TMP_DIR}/10kb_zeros") then
 end
 
 #---------
+
+configure do
+  mime_type :plain, 'text/plain'
+  set :server, 'puma'
+  set :port, 9595
+end
 
 get '/' do
   "Capaplan Capacity Planner\n  /status - give status"
