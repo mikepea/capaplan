@@ -5,30 +5,41 @@ require 'bundler/setup'
 
 require 'digest/sha1'
 require 'fileutils'
+require 'tempfile'
 require 'timeout'
 
 require 'sinatra'
 
 TMP_DIR = '/tmp/capaplan'
-SHA1_1MB_ZEROS = '3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3'
-SHA1_10MB_ZEROS = '8c206a1a87599f532ce68675536f0b1546900d7a'
-SHA1_TIMEOUT = 0.1  # 100ms
+SHA1_SIZE = { 
+  '1'      => '60cacbf3d72e1e7834203da608037b1bf83b40e8',
+  '10'     => '34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c',
+  '100'    => '5a6918eebd9d635e8f632e3ef34e3792b1b5ec13',
+  '1000'   => '8fee1653e234fee8513245d3cb3e3c06d071493e',
+  '10000'  => 'c2bfe67cfb2e4cac7edbb3013888abea6a123ac5',
+}
+
+SHA1_TIMEOUT = {
+  '1'     => 0.001,
+  '10'    => 0.01,
+  '100'   => 0.01,
+  '1000'  => 0.1,
+  '10000' => 0.1,
+}
 
 unless File.exists?(TMP_DIR) then
   FileUtils.mkdir(TMP_DIR)
 end
 
-unless File.exists?("#{TMP_DIR}/10mb_zeros") then
-  `dd if=/dev/zero of=#{TMP_DIR}/10mb_zeros bs=1024k count=10`
-end
+# Precreate a bunch of filesystem data for consistent operations later.
+#  - sha1 create (via buffer reads)
+system("dd if=/dev/zero of=#{TMP_DIR}/1kb_zeros bs=1k count=1")          unless File.exists?("#{TMP_DIR}/1kb_zeros")
+system("dd if=/dev/zero of=#{TMP_DIR}/10kb_zeros bs=10k count=1")        unless File.exists?("#{TMP_DIR}/10kb_zeros")
+system("dd if=/dev/zero of=#{TMP_DIR}/100kb_zeros bs=10k count=10")      unless File.exists?("#{TMP_DIR}/100kb_zeros")
+system("dd if=/dev/zero of=#{TMP_DIR}/1000kb_zeros bs=10k count=100")    unless File.exists?("#{TMP_DIR}/1000kb_zeros")
+system("dd if=/dev/zero of=#{TMP_DIR}/10000kb_zeros bs=10k count=1000")  unless File.exists?("#{TMP_DIR}/10000kb_zeros")
 
-unless File.exists?("#{TMP_DIR}/1mb_zeros") then
-  `dd if=/dev/zero of=#{TMP_DIR}/1mb_zeros bs=1024k count=1`
-end
-
-unless File.exists?("#{TMP_DIR}/10kb_zeros") then
-  `dd if=/dev/zero of=#{TMP_DIR}/10kb_zeros bs=10k count=1`
-end
+KB_DATA_BLOCK = File.read("#{TMP_DIR}/1kb_zeros")
 
 #---------
 
@@ -51,24 +62,42 @@ get '/load/cpu/sha1' do
   # combined with buffer cache, this is essentially a CPU-only operation
   #  - though do we have stat() to content with?
   hex = ''
-  timeout = params[:timeout].to_f || SHA1_TIMEOUT
+  size    = params[:size] || '1000'
+  timeout = params[:timeout].to_f || SHA1_TIMEOUT[size].to_f
 
   begin 
     Timeout.timeout(timeout) {
-      hex = Digest::SHA1.file("#{TMP_DIR}/10mb_zeros").hexdigest  
+      hex = Digest::SHA1.file("#{TMP_DIR}/#{size}kb_zeros").hexdigest
     }
   rescue => e
     puts "Timeout executing SHA1 (timeout=#{timeout}) error='#{e.message}'"
     halt 500
   end
 
-  if ( hex != SHA1_10MB_ZEROS ) then
+  if ( hex != SHA1_SIZE[size] ) then
     puts "SHA1 checksum does not match! (#{hex})"
     halt 500
   end
 
   "OK"
 
+end
+
+post '/load/disk/write' do
+  size = params[:size].to_i || 1024  # num kbytes to write
+  data = ''
+  file = Tempfile.new('write_test')
+  puts "writing to #{file.path}"
+  size.times { |n| 
+    file.write(KB_DATA_BLOCK)
+  }
+  file.close(unlink_now=false)
+  file.unlink unless params[:unlink]
+  "OK: #{size}KiB written" 
+end
+
+post '/control/shutdown' do
+  exit!
 end
 
 get '/load/noop/simple' do

@@ -1,4 +1,4 @@
-capaplan - Capacity Planning helpers
+capaplan - HTTP Capacity Planning helpers
 ===
 
 capaplan.rb - basic Ruby/Sinatra app to simulate various types of load common to web applications
@@ -24,7 +24,8 @@ Using HTTP endpoints allows us to use HTTP load testing toolkits like <http://ga
 
 Current endpoints:
 
- /status         -- return 200 OK if all good
- /load/cpu/sha1  -- sha1 10mb, to burn some CPU
+* /status          -- return 200 OK if all good
+* /load/cpu/sha1   -- sha1 some data, to burn CPU consistently
+* /load/disk/write?size=n -- write n x 1kb chunks to a local temp file.
 
 
