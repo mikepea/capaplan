@@ -1,11 +1,50 @@
 ---
 # This role unpacks and configures base gatling
 
-- name: copy gatling bundle up
-  copy: src=gatling-charts-highcharts-1.5.2-bundle.tar.gz
-        dest=/home/mike/gatling-charts-highcharts-1.5.2-bundle.tar.gz
+- name: install nginx config to access reports
+  copy: dest=/etc/nginx/sites-available/gatling
+        src=nginx_gatling.conf
+  sudo: yes
+  notify: restart nginx
+  tags: nginx
+
+- name: install nginx config to access reports
+  file: path=/etc/nginx/sites-enabled/020-gatling
+        src=/etc/nginx/sites-available/gatling
+        state=link
+  sudo: yes
+  tags: nginx
+
+- name: clone the github repo with gatling in it
+  git:  repo=https://github.com/mikepea/capaplan.git
+        dest=capaplan
 
 - name: untar gatling
-  command: tar -zxf gatling-charts-highcharts-1.5.2-bundle.tar.gz
+  command: tar -zxf capaplan/ansible/roles/gatling/files/gatling-charts-highcharts-1.5.2-bundle.tar.gz
            creates=gatling-charts-highcharts-1.5.2
+
+- name: link gatling gatling.conf
+  file: path=/home/mike/gatling-charts-highcharts-1.5.2/conf/gatling.conf
+        src=/home/mike/capaplan/gatling/conf/gatling.conf
+        state=link
+        force=yes
+
+- name: link gatling application.conf
+  file: path=/home/mike/gatling-charts-highcharts-1.5.2/conf/application.conf
+        src=/home/mike/capaplan/gatling/conf/application.conf
+        state=link
+        force=yes
+
+- name: link gatling logback.xml
+  file: path=/home/mike/gatling-charts-highcharts-1.5.2/conf/logback.xml
+        src=/home/mike/capaplan/gatling/conf/logback.xml
+        state=link
+        force=yes
+
+- name: remove gatling default user-files, pre linking
+  shell: '[ ! -L /home/mike/gatling-charts-highcharts-1.5.2/user-fies ] && rm -rf /home/mike/gatling-charts-highcharts-1.5.2/user-fies'
+
+- name: link into our gatling git dir
+  file: path=/home/mike/gatling-charts-highcharts-1.5.2/user-fies
+        src=/home/mike/capaplan/gatling/user-fies
 

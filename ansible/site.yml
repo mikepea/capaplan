@@ -8,17 +8,28 @@
   roles:
   - common
   - collectd
+  - nginx
+  handlers: 
+        - name: restart collectd
+          service: name=collectd state=restarted
 
 - hosts: digitalocean
   user: root
   roles:
   - common
   - collectd
+  - nginx
+  handlers: 
+        - name: restart collectd
+          service: name=collectd state=restarted
 
 - hosts: gatling
   user: mike
   roles:
   - gatling
+  handlers: 
+        - name: restart nginx
+          service: name=nginx state=restarted
 
 - hosts: webservers
   user: myapp
@@ -30,4 +41,8 @@
   sudo: yes
   roles:
   - capaplan
+  handlers: 
+        - name: restart nginx
+          service: name=nginx state=restarted
+
 

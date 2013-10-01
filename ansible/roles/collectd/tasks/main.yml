@@ -7,7 +7,6 @@
     - collectd
 
 - name: install collectd config
-  file: src=collectd.conf 
+  copy: src=collectd.conf 
         dest=/etc/collectd/collectd.conf
-
-
+  notify: restart collectd

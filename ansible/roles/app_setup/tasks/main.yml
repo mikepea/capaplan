@@ -21,4 +21,3 @@
 - name: run bundle install for myapp
   shell: rbenv exec rake bundle
          chdir=/home/myapp/capaplan
-

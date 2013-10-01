@@ -1,20 +1,29 @@
 ---
 
-- name: install nginx
-  apt: name=nginx state=present
-
-- name: remove default vhost
-  file: dest=/etc/nginx/sites-enabled/default state=absent
-
 - name: install capaplan base dir
   file: dest=/var/www/capaplan/ state=directory 
 
 - name: install capaplan log dir
+  file: dest=/var/www/capaplan/html state=directory 
+
+- name: install capaplan log dir
   file: dest=/var/www/capaplan/logs state=directory 
 
+- name: install basic nginx static page
+  copy: src=test.html
+        dest=/var/www/capaplan/html/test.html
 
 - name: configure capaplan vhost
-  template: src=capaplan_nginx.j2 dest=/etc/nginx/sites-available/capaplan.conf mode=0644 owner=root group=root
+  template: src=capaplan_nginx.j2 
+            dest=/etc/nginx/sites-available/capaplan.conf 
+            mode=0644 
+            owner=root 
+            group=root
+  notify: restart nginx
+  tags: nginx
 
 - name: enable capaplan vhost
-  file: src=/etc/nginx/sites-available/capaplan.conf dest=/etc/nginx/sites-enabled/010-capaplan.conf state=link
+  file: src=/etc/nginx/sites-available/capaplan.conf 
+        path=/etc/nginx/sites-enabled/010-capaplan.conf 
+        state=link
+  tags: nginx

@@ -53,6 +53,11 @@
     - git
     - openjdk-7-jre-headless
     - build-essential
+    - vim
+    - tcpdump
+    - lsof
+    - nmap
+    - tmux
 
 - name: install rbenv and ruby-1.9.3 (from gov.uk)
   apt: name={{ item }} state=present
