@@ -6,6 +6,13 @@
 - name: remove default vhost
   file: dest=/etc/nginx/sites-enabled/default state=absent
 
+- name: install capaplan base dir
+  file: dest=/var/www/capaplan/ state=directory 
+
+- name: install capaplan log dir
+  file: dest=/var/www/capaplan/logs state=directory 
+
+
 - name: configure capaplan vhost
   template: src=capaplan_nginx.j2 dest=/etc/nginx/sites-available/capaplan.conf mode=0644 owner=root group=root
 

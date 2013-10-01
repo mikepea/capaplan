@@ -1,0 +1,24 @@
+- name: git clone rbenv into myapp home
+  git:  repo=https://github.com/sstephenson/rbenv.git
+        dest=/home/myapp/.rbenv
+
+- name: git clone ruby-build into myapp .rbenv
+  git:  repo=https://github.com/sstephenson/ruby-build.git
+        dest=/home/myapp/.rbenv/plugins/ruby-build
+
+- name: add rbenv to myapp .profile - path
+  copy: src=bash_profile dest=/home/myapp/.bash_profile mode=0755 
+
+- name: install jruby into myapp .rbenv
+  shell: rbenv install jruby-1.7.4 
+         creates=/home/myapp/.rbenv/versions/jruby-1.7.4
+
+- name: install capaplan src
+  git: repo=https://github.com/mikepea/capaplan.git
+       dest=/home/myapp/capaplan 
+       update=yes
+
+- name: run bundle install for myapp
+  shell: rbenv exec rake bundle
+         chdir=/home/myapp/capaplan
+

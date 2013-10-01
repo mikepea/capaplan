@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# Ubuntu 12.04 LTS x86_64
+image_id=284203 
+
+# mike-2013
+key_id=37663
+
+# sizes
+size_id=63  # 1GB
+#size_id=66  # 512MB
+#size_id=62  # 2GB
+
+# regions
+region_id=1  # nyc1
+#region_id=2  # ams1
+#region_id=3  # sfo1
+#region_id=4  # nyc2
+
+client_id=${DIGITAL_OCEAN_CLIENT_ID}
+api_key=${DIGITAL_OCEAN_API_KEY}
+
+API_BASE="https://api.digitalocean.com/"
+API_PARAMS="client_id=${client_id}&api_key=${api_key}"
+
+hostname=$1
+
+#echo "ssh_keys:"
+#curl -q "${API_BASE}/ssh_keys?${API_PARAMS}"
+#
+#echo "sizes:"
+#curl -q "${API_BASE}/sizes?${API_PARAMS}" | jq '.'
+#
+#echo "regions:"
+#curl -q "${API_BASE}/regions?${API_PARAMS}" | jq '.'
+
+
+ansible localhost -m digital_ocean -a "api_key=${api_key} client_id=${client_id} region_id=${region_id} size_id=${size_id} image_id=${image_id} ssh_key_ids=${key_id} name=${hostname}"

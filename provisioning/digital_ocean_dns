@@ -1,0 +1,19 @@
+#!/bin/sh
+
+domain_id=82139
+
+client_id=${DIGITAL_OCEAN_CLIENT_ID}
+api_key=${DIGITAL_OCEAN_API_KEY}
+
+API_BASE="https://api.digitalocean.com/"
+API_PARAMS="client_id=${client_id}&api_key=${api_key}"
+
+hostname=$1
+ip=$2
+type='A'
+
+# get domain ids
+#curl -q "${API_BASE}/domains?${API_PARAMS}" | jq '.'
+
+curl -q "${API_BASE}/domains/${domain_id}/records/new?name=${hostname}&data=${ip}&record_type=${type}&${API_PARAMS}" | jq '.'
+

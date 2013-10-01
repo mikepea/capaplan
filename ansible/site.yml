@@ -7,26 +7,27 @@
   sudo: yes
   roles:
   - common
+  - collectd
 
 - hosts: digitalocean
   user: root
   roles:
   - common
+  - collectd
 
-# Configure and deploy database servers.
-- hosts: dbservers
-  user: root
+- hosts: gatling
+  user: mike
   roles:
+  - gatling
+
+- hosts: webservers
+  user: myapp
+  roles:
+  - app_setup
 
 - hosts: webservers
   user: mike
   sudo: yes
-
   roles:
   - capaplan
-
-# Configure and deploy the load balancer(s).
-- hosts: lbservers
-  user: root
-  roles:
 

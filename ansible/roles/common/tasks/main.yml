@@ -26,7 +26,46 @@
 - name: mike ssh authorized_keys
   copy: src=~mike/.ssh/authorized_keys dest=/home/mike/.ssh/ owner=mike group=mike mode=0640
 
+- name: mike inputrc
+  copy: src=~mike/.inputrc dest=/home/mike/.inputrc owner=mike group=mike mode=0644
+
+- name: add myapp group
+  group: gid=5000 name=myapp
+
+- name: add myapp user
+  user: uid=5000 name=myapp shell=/bin/bash comment='App user' group=myapp
+
+- name: myapp ssh dir
+  file: dest=/home/myapp/.ssh owner=myapp group=myapp mode=2750 state=directory
+
+- name: myapp ssh authorized_keys
+  copy: src=~mike/.ssh/authorized_keys dest=/home/myapp/.ssh/ owner=myapp group=myapp mode=0640
+
+- name: myapp inputrc
+  copy: src=~mike/.inputrc dest=/home/myapp/ owner=myapp group=myapp mode=0644
+
 - name: ensure sudo group can run sudo with NOPASSWD
   lineinfile: "dest=/etc/sudoers state=present regexp='^%sudo' line='%sudo ALL=(ALL) NOPASSWD: ALL'"
+
+- name: install userland packages
+  apt: name={{ item }} state=present
+  with_items: 
+    - git
+    - openjdk-7-jre-headless
+    - build-essential
+
+- name: install rbenv and ruby-1.9.3 (from gov.uk)
+  apt: name={{ item }} state=present
+  with_items: 
+    - rbenv
+    - rbenv-ruby-1.9.3-p392
+
+- name: remove /etc/profile.d script for rbenv. Bah
+  file: dest=/etc/profile.d/rbenv.sh 
+        state=absent
+
+
+#- name: copy/enable rbenv /etc/profile.d script
+#  copy: src=rbenv_profile.sh dest=/etc/profile.d/rbenv.sh mode=0755
 
 # vim: et ts=2 sw=2 ai

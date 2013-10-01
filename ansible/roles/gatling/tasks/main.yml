@@ -1,0 +1,11 @@
+---
+# This role unpacks and configures base gatling
+
+- name: copy gatling bundle up
+  copy: src=gatling-charts-highcharts-1.5.2-bundle.tar.gz
+        dest=/home/mike/gatling-charts-highcharts-1.5.2-bundle.tar.gz
+
+- name: untar gatling
+  command: tar -zxf gatling-charts-highcharts-1.5.2-bundle.tar.gz
+           creates=gatling-charts-highcharts-1.5.2
+
