@@ -30,8 +30,8 @@ class ProjectNginxDirectStaticFile extends Simulation {
 
 	val scn = scenario("Scenario Name")
 		.exec(http("request_1")
-					.get("/test.html")
-			)
+		.get("/load/noop/simple")
+	)
 
 	setUp(scn.users(nbUsers).ramp(myRamp).protocolConfig(httpConf))
 }
