@@ -7,7 +7,7 @@ import akka.util.duration._
 import bootstrap._
 import assertions._
 
-class ProjectNginxDirectStaticFile extends Simulation {
+class ProjectCapaplanNoopSimple extends Simulation {
 
         // set via JAVA_OPTS="-Dfoo=bar"
         val baseURL = System.getProperty("base_url")
