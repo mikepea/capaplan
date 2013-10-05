@@ -7,10 +7,20 @@ require 'digest/sha1'
 require 'fileutils'
 require 'tempfile'
 require 'timeout'
+require 'sequel'
+require 'multi_json'
+require 'securerandom'
 
 require 'sinatra'
 
+
+
 TMP_DIR = '/tmp/capaplan'
+
+#DB_CONNECT = "jdbc:mysql://dbhost/capaplantest?user=root&password=root"
+DB_CONNECT = "jdbc:sqlite:#{TMP_DIR}/db.sqlite3"
+DB_TIMEOUT = 0.1
+
 SHA1_SIZE = { 
   '1'      => '60cacbf3d72e1e7834203da608037b1bf83b40e8',
   '10'     => '34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c',
@@ -29,6 +39,32 @@ SHA1_TIMEOUT = {
 
 unless File.exists?(TMP_DIR) then
   FileUtils.mkdir(TMP_DIR)
+end
+
+DB = Sequel.connect(DB_CONNECT)
+
+unless DB.table_exists?(:testwrite)
+  DB.create_table(:testwrite) do
+    String :uuid, :primary_key=>true
+  end
+end
+
+unless DB.table_exists?(:items) 
+  DB.create_table(:items) do
+    primary_key :id
+    String :name
+  end
+end
+
+unless DB.table_exists?(:users) 
+  DB.create_table(:users) do
+    primary_key :id
+    String :name
+  end
+end
+
+unless DB.table_exists?(:items_users) 
+  DB.create_join_table(:user_id=>:users, :item_id=>:items)
 end
 
 # Precreate a bunch of filesystem data for consistent operations later.
@@ -96,8 +132,31 @@ post '/load/disk/write' do
   "OK: #{size}KiB written" 
 end
 
+
+post '/load/db/write' do
+
+  timeout = params[:timeout].to_f || DB_TIMEOUT.to_f
+
+  begin 
+    Timeout.timeout(timeout) {
+      # code goes here
+      uuid = SecureRandom.uuid
+      DB.run("insert into testwrite values ('#{uuid}')")
+    }
+  rescue => e
+    puts "Timeout executing /db/write (timeout=#{timeout}) error='#{e.message}'"
+    halt 500
+  end
+
+  "OK"
+end
+
 post '/control/shutdown' do
   exit!
+end
+
+post '/control/reloadconfig' do
+  read_configuration
 end
 
 get '/load/noop/simple' do
@@ -109,6 +168,10 @@ end
 
 error do
   'Sorry there was a nasty error - ' + env['sinatra.error'].name
+end
+
+def read_configuration 
+  "OK"
 end
 
 # vim: et ts=2 sw=2
