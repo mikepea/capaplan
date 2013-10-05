@@ -17,8 +17,8 @@ require 'sinatra'
 
 TMP_DIR = '/tmp/capaplan'
 
-#DB_CONNECT = "jdbc:mysql://dbhost/capaplantest?user=root&password=root"
-DB_CONNECT = "jdbc:sqlite:#{TMP_DIR}/db.sqlite3"
+DB_CONNECT = "jdbc:mysql://localhost/capaplantest?user=root&password=root"
+#DB_CONNECT = "jdbc:sqlite:#{TMP_DIR}/db.sqlite3"
 DB_TIMEOUT = 0.1
 
 SHA1_SIZE = { 
