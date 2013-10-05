@@ -30,7 +30,7 @@ class ProjectCapaplanLoadDBWrite extends Simulation {
 
 	val scn = scenario("Scenario Name")
 		.exec(http("request_1")
-		.get("/load/db/write")
+		.post("/load/db/write")
 	)
 
 	setUp(scn.users(nbUsers).ramp(myRamp).protocolConfig(httpConf))
