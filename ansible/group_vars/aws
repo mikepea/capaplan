@@ -1,0 +1,4 @@
+---
+file: group_vars/aws
+
+foo2: bar2
