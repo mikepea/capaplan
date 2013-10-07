@@ -4,9 +4,6 @@ GEM
     diff-lcs (1.2.4)
     jdbc-mysql (5.1.25)
     jdbc-sqlite3 (3.7.2.1)
-    multi_json (1.8.1)
-    puma (2.6.0)
-      rack (>= 1.1, < 2.0)
     puma (2.6.0-java)
       rack (>= 1.1, < 2.0)
     rack (1.5.2)
@@ -33,7 +30,6 @@ PLATFORMS
 DEPENDENCIES
   jdbc-mysql
   jdbc-sqlite3
-  multi_json
   puma
   rack
   rspec

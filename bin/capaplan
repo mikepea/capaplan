@@ -3,23 +3,29 @@
 require 'rubygems'
 require 'bundler/setup'
 
+require 'pp'
 require 'digest/sha1'
 require 'fileutils'
 require 'tempfile'
 require 'timeout'
-require 'sequel'
-require 'multi_json'
-require 'securerandom'
+require 'sequel'        # db ORM
+require 'json'
+require 'securerandom'  # for uuid generation
 
-require 'sinatra'
+require 'sinatra'       # web framework
 
+DEFAULTS = {
+   :tmp_dir => '/tmp/capaplan',
+   :default_sha1_size_kb => '1000',
+   :config_file => '/etc/capaplan/capaplan.conf',
+   :db_uri => nil,
+   :db_timeout => 0.1,
+   :db_users_count => 10000,
+   :db_items_count => 10000,
+}
 
+CONFIG_FILE = ARGV.shift || DEFAULTS[:config_file] 
 
-TMP_DIR = '/tmp/capaplan'
-
-DB_CONNECT = "jdbc:mysql://localhost/capaplantest?user=root&password=root"
-#DB_CONNECT = "jdbc:sqlite:#{TMP_DIR}/db.sqlite3"
-DB_TIMEOUT = 0.1
 
 SHA1_SIZE = { 
   '1'      => '60cacbf3d72e1e7834203da608037b1bf83b40e8',
@@ -37,43 +43,100 @@ SHA1_TIMEOUT = {
   '10000' => 0.1,
 }
 
+def read_configuration() 
+  debug "Reading configuration file #{CONFIG_FILE}"
+  data = File.read(CONFIG_FILE)
+  begin
+    config = JSON.parse(data, :symbolize_names => true)
+  rescue => e
+    puts "Cannot parse config file #{CONFIG_FILE}. #{e.message}."
+    exit 1
+  end
+  DEFAULTS.merge(config)
+end
+
+def initialize_data_files()
+  # Precreate a bunch of filesystem data for consistent operations later.
+  #  1kb, 10kb, 100kb, 1000kb, 10000kb
+  5.times do |n|
+    system("dd if=/dev/zero of=#{TMP_DIR}/#{10**n}kb_zeros bs=1k count=1 >/dev/null")          unless File.exists?("#{TMP_DIR}/#{10**n}kb_zeros")
+  end
+end 
+
+def initialize_database()
+  unless DB.table_exists?(:testwrite)
+    DB.create_table(:testwrite) do
+      String :uuid, :primary_key=>true
+    end
+  end
+
+  unless DB.table_exists?(:items) 
+    DB.create_table(:items) do
+      primary_key :id
+      String :name
+    end
+    CONFIG{:db_items_count}.times do |n|
+      m = n + 1
+      puts "#{m} items added to items table" if (m % 10000 == 0) or (m == db_items_count)
+      DB.run("insert into items (name) values ('item-#{m}')")
+    end
+  end
+
+  unless DB.table_exists?(:users) 
+    DB.create_table(:users) do
+      primary_key :id
+      String :name
+    end
+    CONFIG{:db_users_count}.times do |n|
+      m = n + 1
+      puts "#{m} users added to users table" if (m % 10000 == 0) or (m == db_users_count)
+      DB.run("insert into users (name) values ('user-#{m}')")
+    end
+  end
+
+  unless DB.table_exists?(:items_users) 
+    DB.create_join_table(:user_id=>:users, :item_id=>:items)
+  end
+
+end
+
+def verbose(message)
+  puts message
+end 
+
+def debug(message)
+  puts message
+end 
+
+#-------------------------------------
+
+debug "Config file: #{CONFIG_FILE}"
+
+if File.exists?(CONFIG_FILE) 
+  CONFIG = read_configuration()
+else 
+  CONFIG = { }
+end
+
+TMP_DIR = CONFIG[:tmp_dir]
+
+#DB_CONNECT = "jdbc:mysql://localhost/capaplantest?user=root&password=root"
+#DB_CONNECT = "jdbc:sqlite:#{TMP_DIR}/db.sqlite3"
+DB_TIMEOUT = CONFIG[:db_timeout] || DEFAULTS[:db_timeout]
+
+debug "db_uri: #{CONFIG[:db_uri]}"
+debug "DB_TIMEOUT: #{DB_TIMEOUT}"
+
 unless File.exists?(TMP_DIR) then
   FileUtils.mkdir(TMP_DIR)
 end
 
-DB = Sequel.connect(DB_CONNECT)
-
-unless DB.table_exists?(:testwrite)
-  DB.create_table(:testwrite) do
-    String :uuid, :primary_key=>true
-  end
+unless CONFIG[:db_uri].nil?
+  DB = Sequel.connect(CONFIG[:db_uri])
+  initialize_database()
 end
 
-unless DB.table_exists?(:items) 
-  DB.create_table(:items) do
-    primary_key :id
-    String :name
-  end
-end
-
-unless DB.table_exists?(:users) 
-  DB.create_table(:users) do
-    primary_key :id
-    String :name
-  end
-end
-
-unless DB.table_exists?(:items_users) 
-  DB.create_join_table(:user_id=>:users, :item_id=>:items)
-end
-
-# Precreate a bunch of filesystem data for consistent operations later.
-#  - sha1 create (via buffer reads)
-system("dd if=/dev/zero of=#{TMP_DIR}/1kb_zeros bs=1k count=1")          unless File.exists?("#{TMP_DIR}/1kb_zeros")
-system("dd if=/dev/zero of=#{TMP_DIR}/10kb_zeros bs=10k count=1")        unless File.exists?("#{TMP_DIR}/10kb_zeros")
-system("dd if=/dev/zero of=#{TMP_DIR}/100kb_zeros bs=10k count=10")      unless File.exists?("#{TMP_DIR}/100kb_zeros")
-system("dd if=/dev/zero of=#{TMP_DIR}/1000kb_zeros bs=10k count=100")    unless File.exists?("#{TMP_DIR}/1000kb_zeros")
-system("dd if=/dev/zero of=#{TMP_DIR}/10000kb_zeros bs=10k count=1000")  unless File.exists?("#{TMP_DIR}/10000kb_zeros")
+initialize_data_files()
 
 KB_DATA_BLOCK = File.read("#{TMP_DIR}/1kb_zeros")
 
@@ -86,7 +149,7 @@ configure do
 end
 
 get '/' do
-  "Capaplan Capacity Planner\n  /status - give status"
+  "Capaplan Capacity Planner\nUsage:\n  /status - give status\n"
 end
 
 get '/status' do
@@ -98,7 +161,7 @@ get '/load/cpu/sha1' do
   # combined with buffer cache, this is essentially a CPU-only operation
   #  - though do we have stat() to content with?
   hex = ''
-  size    = params[:size] || '1000'
+  size    = params[:size] || DEFAULTS[:default_sha1_size_kb]
   timeout = params[:timeout].to_f || SHA1_TIMEOUT[size].to_f
 
   begin 
@@ -135,20 +198,24 @@ end
 
 post '/load/db/write' do
 
-  timeout = params[:timeout].to_f || DB_TIMEOUT.to_f
+  unless CONFIG[:db_uri].nil?
+    timeout = params[:timeout].to_f || DB_TIMEOUT.to_f
 
-  begin 
-    Timeout.timeout(timeout) {
-      # code goes here
-      uuid = SecureRandom.uuid
-      DB.run("insert into testwrite values ('#{uuid}')")
-    }
-  rescue => e
-    puts "Timeout executing /db/write (timeout=#{timeout}) error='#{e.message}'"
-    halt 500
+    begin 
+      Timeout.timeout(timeout) {
+        # code goes here
+        uuid = SecureRandom.uuid
+        DB.run("insert into testwrite values ('#{uuid}')")
+      }
+    rescue => e
+      puts "Timeout executing /db/write (timeout=#{timeout}) error='#{e.message}'"
+      halt 500
+    end
+    "OK"
+  else
+    "DISABLED"
   end
 
-  "OK"
 end
 
 post '/control/shutdown' do
@@ -168,10 +235,6 @@ end
 
 error do
   'Sorry there was a nasty error - ' + env['sinatra.error'].name
-end
-
-def read_configuration 
-  "OK"
 end
 
 # vim: et ts=2 sw=2
