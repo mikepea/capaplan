@@ -117,7 +117,7 @@ debug "Config file: #{CONFIG_FILE}"
 if File.exists?(CONFIG_FILE) 
   CONFIG = read_configuration()
 else 
-  CONFIG = { }
+  CONFIG = DEFAULTS
 end
 
 TMP_DIR = CONFIG[:tmp_dir]
