@@ -59,7 +59,9 @@ def initialize_data_files()
   # Precreate a bunch of filesystem data for consistent operations later.
   #  1kb, 10kb, 100kb, 1000kb, 10000kb
   5.times do |n|
-    system("dd if=/dev/zero of=#{TMP_DIR}/#{10**n}kb_zeros bs=1k count=1 >/dev/null")          unless File.exists?("#{TMP_DIR}/#{10**n}kb_zeros")
+    unless File.exists?("#{TMP_DIR}/#{10**n}kb_zeros")
+      system("dd if=/dev/zero of=#{TMP_DIR}/#{10**n}kb_zeros bs=1k count=1 >/dev/null 2>&1")
+    end
   end
 end 
 
@@ -75,9 +77,9 @@ def initialize_database()
       primary_key :id
       String :name
     end
-    CONFIG{:db_items_count}.times do |n|
+    CONFIG[:db_items_count].times do |n|
       m = n + 1
-      puts "#{m} items added to items table" if (m % 10000 == 0) or (m == db_items_count)
+      puts "#{m} items added to items table" if (m % 10000 == 0) or (m == CONFIG[:db_items_count])
       DB.run("insert into items (name) values ('item-#{m}')")
     end
   end
@@ -87,9 +89,9 @@ def initialize_database()
       primary_key :id
       String :name
     end
-    CONFIG{:db_users_count}.times do |n|
+    CONFIG[:db_users_count].times do |n|
       m = n + 1
-      puts "#{m} users added to users table" if (m % 10000 == 0) or (m == db_users_count)
+      puts "#{m} users added to users table" if (m % 10000 == 0) or (m == CONFIG[:db_users_count])
       DB.run("insert into users (name) values ('user-#{m}')")
     end
   end
