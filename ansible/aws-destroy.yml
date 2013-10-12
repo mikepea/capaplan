@@ -1,0 +1,14 @@
+---
+
+- hosts: all
+  tasks:
+  - name: Gather facts
+    action: ec2_facts
+    register: ec2
+  - name: terminiate instances
+    local_action: ec2
+      wait=yes
+      state='absent'
+      region='eu-west-1'
+      instance_ids="{{ hostvars['54.229.199.31'].ansible_ec2_instance_id }}"
+
