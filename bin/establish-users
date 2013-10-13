@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+
+require 'pp'
+require 'date'
+
+
+PLAN_NAME = ARGV[0]
+BASE_URL  = ARGV[1]
+
+OUTPUT_BASE_DIR="/home/mike/gatling-charts-highcharts-1.5.2/results/#{PLAN_NAME}"
+
+duration  = 60
+trigger_99th_percentile_ms = ARGV[2].to_i
+
+num_users = ARGV[3].to_i
+last_success_num_users = 0
+last_fail_num_users = 0
+
+num_users = 100 if num_users == 0
+trigger_99th_percentile_ms = 1000 if trigger_99th_percentile_ms == 0
+
+stats_tsv_fields = {}
+
+DEBUG = false
+
+def debug(msg) 
+  if DEBUG then
+    puts msg
+  end
+end
+
+debug "num_users= #{num_users}"
+debug "trigger_99th_percentile_ms = #{trigger_99th_percentile_ms}"
+
+while ( num_users != last_success_num_users ) do
+
+  debug "Running Gatling with #{num_users} users"
+  
+  output_dir = "#{DateTime.now().strftime('%Y-%m-%d--%H%M%S')}"
+  ENV['JAVA_OPTS'] = "-Dbase_url=#{BASE_URL} -Dusers=#{duration * num_users} -Dramp=#{duration}"
+  system("~/gatling-charts-highcharts-1.5.2/bin/gatling.sh --simulation #{PLAN_NAME} -rf #{OUTPUT_BASE_DIR} --output-name #{output_dir} >/dev/null 2>&1")
+
+  data = Hash.new()
+
+  Dir.chdir("#{OUTPUT_BASE_DIR}")
+
+  # read in the gatling stats file, and process.
+  actual_stats_file_dir = Dir.glob("#{output_dir}-*").pop
+
+  File.readlines("#{OUTPUT_BASE_DIR}/#{actual_stats_file_dir}/stats.tsv").each do |line|
+
+    if line =~ /^name/ then
+      stats_tsv_fields = line.split(/\t/)
+
+    elsif line =~ /^Global Information/ then
+
+      i = 0
+      line.split(/\t/).each do |dp|
+        key = stats_tsv_fields[i]
+        data[stats_tsv_fields[i].to_sym] = dp
+        i += 1
+      end
+    end
+  end
+
+  if trigger_99th_percentile_ms > data[:percentile2].to_i then
+     debug "All good at #{num_users} users per second"
+     last_success_num_users = num_users
+     if last_fail_num_users > 0 then
+       num_users = ( num_users + ( last_fail_num_users - num_users ) / 2 )
+     else
+       num_users = num_users * 2
+     end
+  else 
+     debug "NOT good at #{num_users} users per second."
+     if last_success_num_users > 0 then
+       last_fail_num_users = num_users
+       if last_success_num_users + 1 == num_users
+         # we're on the cusp of failure, success is one less than us.
+         # trigger bail condition
+         num_users = last_success_num_users
+       else
+         num_users = num_users - ( num_users - last_success_num_users ) / 2 
+       end
+     else
+       last_fail_num_users = num_users
+       num_users = num_users / 2 
+     end
+  end
+
+  debug "#{num_users}/#{last_success_num_users}/#{last_fail_num_users}: #{data[:percentile2]}"
+ 
+end
+
+puts "#{DateTime.now().strftime('%s')} #{num_users}"
+
+# vim: syntax=ruby et ts=2 sw=2
+
